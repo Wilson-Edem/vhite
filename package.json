@@ -1,0 +1,12 @@
+{
+  "name": "vhite",
+  "version": "1.0.0",
+  "description": "An ai code cleaner (free)",
+  "license": "ISC",
+  "author": "Victor Edem",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
