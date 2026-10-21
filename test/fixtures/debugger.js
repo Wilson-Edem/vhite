@@ -1,3 +1,3 @@
-// debugger in a comment is fine
-const word = "debugger";
-debugger;
+import { used } from "./a.js";
+import "./setup.js";
+console.log(used);
