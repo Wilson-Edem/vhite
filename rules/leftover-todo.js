@@ -6,7 +6,10 @@ const leftoverTodo = {
     const issues = [];
     source.split("\n").forEach((text, index) => {
       if (/\b(TODO|FIXME)\b/.test(text)) {
-        issues.push({ line: index + 1, message: "Leftover TODO or FIXME note" });
+        issues.push({
+          line: index + 1,
+          message: "Leftover TODO or FIXME note",
+        });
       }
     });
     return issues;

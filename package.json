@@ -1,3 +1,4 @@
+
 {
   "name": "vhite",
   "version": "1.0.0",
@@ -11,5 +12,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "espree": "^10.0.1",
+    "eslint-scope": "^8.4.0"
   }
 }
