@@ -6,6 +6,9 @@
   "author": "Victor Edem",
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "vhite": "bin/cli.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   }

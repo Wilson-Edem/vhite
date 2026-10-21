@@ -1,0 +1,30 @@
+You're right. Your saved workflow says a project starts with a roadmap, then the files needed and the changes, then setup instructions, and only then code. I jumped to folder-by-folder steps and skipped the roadmap. I'll follow your order from here, and I won't write any code unless you ask.
+
+**1. Roadmap**
+
+- **Phase 0, Project setup:** Done. The project is on GitHub and cloned to your laptop.
+- **Phase 1, Command skeleton:** Typing `npx vhite` runs and prints a simple message. Proves the command works.
+- **Phase 2, File finding:** vhite finds the JavaScript, JSX, HTML, and CSS files in the folder you run it from.
+- **Phase 3, Rule engine:** Rules are separate files. The engine runs every rule on every file and collects the issues.
+- **Phase 4, First rules:** A small set, such as unused imports and leftover comments.
+- **Phase 5, Report:** Readable text output with file names and line numbers.
+- **Phase 6, Tests:** Sample files with known problems, and tests that check vhite finds exactly those.
+- **Later phases:** Safe fixing on a copy, the optional AI stage, a config file, and publishing to npm.
+
+Each phase ends with something you can run and check. We don't start a phase until the one before it works.
+
+**2. Files needed and changes**
+
+For Phases 1 to 6:
+
+- `package.json`: add a `bin` entry that points `vhite` at the entry file. Replace the placeholder test script in a later phase.
+- `bin/cli.js`: the entry file. Reads the command, calls the engine, prints the result. No checking logic.
+- `src/engine.js`: finds files, runs rules, collects issues.
+- `src/files.js`: finds the front-end files in a folder.
+- `src/reporter.js`: prints the text report.
+- `rules/`: one file per rule.
+- `test/`: sample files and tests.
+
+**3. Setup instructions**
+
+The laptop setup is complete. The next setup step appears only when we add a parser, since that needs an install. I'll give you that step when we reach it.
