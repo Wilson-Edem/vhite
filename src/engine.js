@@ -1,4 +1,3 @@
-
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { parse } from "espree";
@@ -21,14 +20,15 @@ function parseSource(source, file) {
   });
 }
 
-export async function runRules(files) {
+export async function runRules(files, { disabledRules = new Set() } = {}) {
   const issues = [];
+  const activeRules = rules.filter((rule) => !disabledRules.has(rule.name));
 
   for (const file of files) {
     const source = await readFile(file, "utf8");
     const extension = extname(file).toLowerCase();
 
-    const applicableRules = rules.filter((rule) =>
+    const applicableRules = activeRules.filter((rule) =>
       rule.extensions?.includes(extension)
     );
 

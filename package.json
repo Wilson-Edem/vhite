@@ -1,4 +1,3 @@
-
 {
   "name": "vhite",
   "version": "1.0.0",
@@ -11,7 +10,7 @@
     "vhite": "bin/cli.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "espree": "^10.0.1",

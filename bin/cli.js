@@ -1,4 +1,12 @@
 #!/usr/bin/env node
+import { resolve, join } from "node:path";
+import { existsSync } from "node:fs";
+import { findFiles } from "../src/files.js";
+import { runRules } from "../src/engine.js";
+import { formatReport } from "../src/reporter.js";
+import { loadConfig } from "../src/config.js";
+import { CONFIG_NAME, canAskQuestions, runFirstTimeSetup } from "../src/setup.js";
+
 console.log(`vhite is installed and running
     loading..
              ....
@@ -6,19 +14,31 @@ console.log(`vhite is installed and running
                        ........
     Done..
     `);
-import { resolve } from "node:path";
-import { findFiles } from "../src/files.js";
-import { runRules } from "../src/engine.js";
 
 const target = resolve(process.argv[2] ?? ".");
-const files = await findFiles(target);
 
-console.log(`vhite found ${files.length} front-end files in ${target}
-    `);
-for (const file of files) {
-  console.log(file);
+if (!existsSync(join(target, CONFIG_NAME)) && canAskQuestions()) {
+  await runFirstTimeSetup(target);
 }
 
-const issues = await runRules(files);
+let config;
+try {
+  config = await loadConfig(target);
+} catch (error) {
+  console.log(`Error: ${error.message}`);
+  process.exit(1);
+}
 
-console.log(`vhite scanned ${files.length} files and found ${issues.length} issues`);
+for (const warning of config.warnings) {
+  console.log(`Warning: ${warning}`);
+}
+if (config.disabledRules.size > 0) {
+  console.log(`Rules turned off by ${CONFIG_NAME}: ${[...config.disabledRules].join(", ")}`);
+}
+
+const files = await findFiles(target);
+console.log(`vhite found ${files.length} front-end files in ${target}
+    `);
+
+const issues = await runRules(files, { disabledRules: config.disabledRules });
+console.log(formatReport(issues, target));

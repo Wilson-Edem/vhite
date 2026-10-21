@@ -7,6 +7,27 @@ const unusedImport = {
   requiresAst: true,
   check({ ast }) {
     const issues = [];
+    const jsxNames = new Set();
+    let hasJsx = false;
+
+    function collectJsx(node) {
+      if (!node || typeof node !== "object") return;
+      if (node.type === "JSXIdentifier") jsxNames.add(node.name);
+      if (node.type === "JSXOpeningElement" || node.type === "JSXFragment") hasJsx = true;
+
+      for (const [key, value] of Object.entries(node)) {
+        if (["loc", "range", "tokens", "comments"].includes(key)) continue;
+        if (Array.isArray(value)) {
+          for (const child of value) {
+            if (child && typeof child.type === "string") collectJsx(child);
+          }
+        } else if (value && typeof value.type === "string") {
+          collectJsx(value);
+        }
+      }
+    }
+
+    collectJsx(ast);
 
     let scopeManager;
     try {
@@ -17,7 +38,6 @@ const unusedImport = {
         ignoreEval: true,
       });
     } catch {
-      // If scope analysis cannot handle a file, avoid reporting unreliable results.
       return issues;
     }
 
@@ -27,7 +47,10 @@ const unusedImport = {
         if (!isImport) continue;
 
         const hasRead = variable.references.some((reference) => reference.isRead());
-        if (!hasRead) {
+        const usedInJsx = jsxNames.has(variable.name);
+        const implicitReact = variable.name === "React" && hasJsx;
+
+        if (!hasRead && !usedInJsx && !implicitReact) {
           const definition = variable.defs.find((item) => item.type === "ImportBinding");
           issues.push({
             line: definition?.name?.loc?.start.line ?? variable.identifiers[0]?.loc?.start.line ?? 1,
