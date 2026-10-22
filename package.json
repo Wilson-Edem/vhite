@@ -1,14 +1,38 @@
 {
   "name": "vhite",
-  "version": "1.0.0",
-  "description": "An ai code cleaner (free)",
+  "version": "0.1.0",
+  "description": "An AI code cleaner for front-end projects that finds and safely fixes common AI-generated problems",
   "license": "ISC",
   "author": "Victor Edem",
   "type": "module",
-  "main": "index.js",
+  "main": "bin/cli.js",
   "bin": {
     "vhite": "bin/cli.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "rules",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ai",
+    "code-cleanup",
+    "linter",
+    "front-end",
+    "javascript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wilson-Edem/vhite"
+  },
+  "bugs": {
+    "url": "https://github.com/Wilson-Edem/vhite/issues"
+  },
+  "homepage": "https://github.com/Wilson-Edem/vhite#readme",
   "scripts": {
     "test": "node --test test/*.test.js"
   },

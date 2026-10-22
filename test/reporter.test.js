@@ -13,7 +13,7 @@ test("reporter groups issues by file and sorts each file by line number", () => 
     { file: "/project/src/a.js", line: 9, message: "Later issue", rule: "console-log" },
     { file: "/project/src/b.js", line: 2, message: "Other file issue", rule: "debugger-statement" },
     { file: "/project/src/a.js", line: 3, message: "Earlier issue", rule: "debugger-statement" },
-  ], root);
+   ], root).replace(/\\/g, "/");
 
   assert.ok(report.indexOf("src/a.js") < report.indexOf("src/b.js"));
   assert.ok(report.indexOf("Line 3: Earlier issue") < report.indexOf("Line 9: Later issue"));

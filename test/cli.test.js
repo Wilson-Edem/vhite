@@ -65,7 +65,7 @@ test("CLI reports invalid configuration and exits with an error", async () => {
   }, (root) => {
     const result = runCli(root);
     assert.equal(result.status, 1);
-    assert.match(result.stdout, /Error: vhite\.config\.json is not valid JSON/);
+    assert.match(result.stderr, /Error: vhite\.config\.json is not valid JSON/);
   });
 });
 

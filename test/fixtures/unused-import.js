@@ -1,3 +1,3 @@
 import { used } from "./a.js";
-import "./setup.js";
+import { unused } from "./b.js";
 console.log(used);

@@ -1,7 +1,7 @@
 export const explanations = {
-  "leftover-todo": {
-    whatHappened: "A TODO or FIXME note is still in a comment. These usually mark unfinished work that can be forgotten before release.",
-    proposedChange: "Finish the task and delete the note, or move the task to your issue tracker and delete the comment.",
+   "leftover-todo": {
+    whatHappened: "A comment is still in the code. Comments that mark unfinished work (TODO or FIXME) are easy to forget before release, and other comments can go out of date and mislead the next developer.",
+    proposedChange: "Finish the task and delete the note, or move it to your issue tracker. Delete other comments that no longer explain anything.",
   },
   "debugger-statement": {
     whatHappened: "A debugger statement pauses the program whenever developer tools are open. Left in, it can freeze the app for anyone who has them open.",

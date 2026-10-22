@@ -11,7 +11,11 @@ export function formatReport(issues, root) {
   }
 
   const lines = [];
-  for (const [file, fileIssues] of byFile) {
+  const sortedFiles = [...byFile.keys()].sort((a, b) =>
+    relative(root, a).localeCompare(relative(root, b))
+  );
+  for (const file of sortedFiles) {
+    const fileIssues = byFile.get(file);
     lines.push(relative(root, file));
     fileIssues.sort((a, b) => a.line - b.line);
     for (const issue of fileIssues) {

@@ -95,7 +95,7 @@ try {
 
   if (config.disabledRules.size > 0) {
     console.log(
-      `Rules turned off by config: ${[...config.disabledRules].join(", ")}`
+           `Rules turned off by ${CONFIG_NAME}: ${[...config.disabledRules].join(", ")}`
     );
   }
 
