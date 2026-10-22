@@ -1,0 +1,619 @@
+Vhite is currently a solid early CLI linting and safe-fix tool for JavaScript frontends. It already has:
+
+- Recursive frontend file discovery
+- JavaScript, JSX, HTML, and CSS scanning
+- AST parsing with Espree
+- Rules for TODOs, `debugger`, console logs, empty blocks, empty catches, unused imports, and hardcoded secrets
+- Rule disabling through `vhite.config.json`
+- Interactive fix approval
+- Backups and rollback when a fix does not remove the finding
+- Markdown run reports
+- Tests and CLI automation support
+
+The biggest opportunity is to make it useful every day, faster on real projects, and more trustworthy than a basic lint script.
+
+## Highest-value features to add first
+
+1. **Command options**
+
+Support commands such as:
+
+```text
+vhite scan
+vhite fix
+vhite init
+vhite rules
+vhite explain <rule>
+vhite report
+vhite restore
+vhite version
+```
+
+Add flags such as:
+
+```text
+--fix
+--check
+--format text
+--format json
+--format markdown
+--quiet
+--verbose
+--no-color
+--rule rule-name
+--disable rule-name
+--include path
+--exclude path
+--stdin
+--watch
+```
+
+2. **Proper exit codes**
+
+CI tools need predictable behavior:
+
+- `0`: no issues
+- `1`: issues found
+- `2`: invalid configuration or runtime failure
+- `3`: fixes were applied
+- `4`: fixes were rolled back
+
+Allow `--fix` to return success only if the final scan is clean.
+
+3. **JSON and SARIF output**
+
+Add machine-readable reports for:
+
+- GitHub Code Scanning
+- GitLab
+- VS Code integrations
+- CI dashboards
+- Custom scripts
+
+Each issue should include:
+
+```json
+{
+  "rule": "no-console-log",
+  "file": "src/App.jsx",
+  "line": 14,
+  "column": 5,
+  "severity": "warning",
+  "message": "..."
+}
+```
+
+4. **Columns and ranges**
+
+Many findings currently only report a line. Add:
+
+- Start column
+- End column
+- Start offset
+- End offset
+- A code snippet
+- A suggested replacement
+
+This makes editor integrations and precise fixes possible.
+
+5. **Severity levels**
+
+Give every rule a severity:
+
+- `error`
+- `warning`
+- `info`
+
+Allow configuration like:
+
+```json
+{
+  "rules": {
+    "no-console-log": "error",
+    "leftover-todo": "warning",
+    "hardcoded-secret": "error"
+  }
+}
+```
+
+6. **Rule configuration**
+
+Rules should accept options, for example:
+
+```json
+{
+  "rules": {
+    "no-console-log": {
+      "severity": "warning",
+      "allow": ["error", "warn"]
+    },
+    "no-todo": {
+      "severity": "info",
+      "allow": ["TODO: remove later"]
+    }
+  }
+}
+```
+
+7. **Baseline support**
+
+Large existing projects need a gradual adoption mode:
+
+```text
+vhite baseline create
+vhite --baseline .vhite-baseline.json
+```
+
+Existing findings are ignored, while new findings fail CI.
+
+8. **Inline suppression comments**
+
+Support controlled exceptions:
+
+```js
+// vhite-disable-next-line no-console-log
+console.log("Allowed for local debugging");
+```
+
+Also support:
+
+```js
+// vhite-disable no-console-log
+// vhite-enable no-console-log
+```
+
+Require a reason optionally:
+
+```js
+// vhite-disable-next-line no-console-log -- reason: temporary migration log
+```
+
+9. **Watch mode**
+
+Watch files and rescan after every save:
+
+```text
+vhite --watch
+```
+
+Show only changed findings and clear resolved issues.
+
+10. **Git-aware scanning**
+
+Add options to scan:
+
+- Only changed files
+- Files changed from `main`
+- Staged files
+- Files in the current commit
+
+Examples:
+
+```text
+vhite --changed
+vhite --staged
+vhite --since HEAD~1
+```
+
+This would make Vhite much faster in pre-commit workflows.
+
+## Frontend-specific rules you should add
+
+### React and JSX
+
+- Missing `key` props in lists
+- Array index used as a key
+- State updates during render
+- Invalid hook usage
+- Hooks called conditionally
+- Missing hook dependencies
+- Unnecessary `useEffect`
+- `useEffect` causing an obvious render loop
+- Missing cleanup in effects
+- Unstable object or function dependencies
+- Props spreading everywhere
+- Mutating props
+- Mutating state directly
+- Components declared inside components
+- Very large components
+- Missing button type
+- Click handlers on noninteractive elements
+- Missing keyboard handlers
+- Missing accessible labels
+- Missing alt text
+- Invalid ARIA attributes
+- Duplicate IDs
+- Missing form labels
+- Uncontrolled and controlled input mixing
+- Unnecessary fragments
+- Nested ternaries in JSX
+- Hardcoded repeated JSX strings
+- `dangerouslySetInnerHTML`
+- Rendering raw user input
+- Missing loading and error states
+- Images without dimensions
+- Unoptimized image usage
+- Links implemented as buttons
+- Buttons implemented as links
+
+### Vue
+
+- Missing `key` in `v-for`
+- Mutating props
+- Unsafe watchers
+- Missing computed values
+- Incorrect `v-if` and `v-for` combinations
+- Missing form labels
+- Unsafe `v-html`
+- Components with excessive template complexity
+
+### General browser code
+
+- `document.querySelector` without null handling
+- Event listeners without cleanup
+- Use of deprecated browser APIs
+- Synchronous storage access in hot paths
+- Excessive `localStorage` usage
+- Secrets embedded in frontend bundles
+- Unsafe URL construction
+- `window.open` without `noopener`
+- Missing `rel="noopener noreferrer"`
+- Unhandled promise rejections
+- `fetch` without error handling
+- Fetch calls without abort handling
+- Repeated API calls in render paths
+- Missing request timeout
+- `innerHTML` usage
+- `eval` and `new Function`
+- Weak random numbers for security-sensitive values
+- Client-side authorization checks presented as security
+
+## Accessibility features
+
+This should become one of Vhite’s strongest differentiators.
+
+Add checks for:
+
+- Images missing `alt`
+- Decorative images using incorrect alt text
+- Form inputs without labels
+- Empty buttons
+- Empty links
+- Click handlers on `<div>` and `<span>`
+- Missing keyboard support
+- Missing focus styles
+- Low color contrast
+- Heading levels skipping from `h1` to `h4`
+- Multiple `h1` elements
+- Invalid ARIA roles
+- Invalid ARIA attributes
+- `aria-hidden="true"` on focusable elements
+- Missing `lang` on `<html>`
+- Missing document title
+- Autoplaying media
+- Missing captions
+- Tables without headers
+- Duplicate IDs
+- Modal dialogs without focus management
+- Toasts not announced to screen readers
+- Inputs without autocomplete hints
+- Touch targets that are too small
+
+Add a dedicated accessibility summary:
+
+```text
+Accessibility score: 78/100
+Errors: 4
+Warnings: 11
+```
+
+## Security features
+
+Your hardcoded-secret rule is a good start. Expand it into a security category:
+
+- AWS keys
+- GitHub tokens
+- Stripe keys
+- Slack tokens
+- JWTs
+- Private keys
+- Database URLs
+- Generic API keys
+- Passwords in source
+- `.env` files accidentally committed
+- Secrets in source maps
+- Unsafe regular expressions
+- ReDoS-prone patterns
+- Prototype pollution patterns
+- Unsafe deserialization
+- Command injection patterns
+- Path traversal
+- Open redirects
+- XSS through DOM sinks
+- Unsafe iframe usage
+- Missing CSP
+- Missing security headers
+- Insecure cookies
+- Tokens stored in localStorage
+- Sensitive data in query strings
+- Debug endpoints left enabled
+
+Add secret redaction in reports so Vhite never prints the full credential.
+
+## Performance features
+
+- Detect huge bundles
+- Detect imports of entire libraries
+- Detect duplicate dependencies
+- Detect unnecessary barrel imports
+- Detect large inline images
+- Detect unoptimized SVGs
+- Detect render-blocking scripts
+- Detect missing lazy loading
+- Detect components that re-render excessively
+- Detect expensive work inside render functions
+- Detect repeated object creation in JSX
+- Detect missing virtualization for very large lists
+- Detect synchronous layout reads after writes
+- Detect forced reflow patterns
+- Detect unbounded event handlers
+- Detect timers without cleanup
+- Detect oversized CSS selectors
+- Detect duplicate CSS declarations
+- Detect unused CSS
+- Detect unused assets
+- Detect missing cache headers
+- Detect missing compression hints
+- Detect excessive third-party scripts
+
+## Maintainability features
+
+- Cyclomatic complexity
+- Function length
+- File length
+- Component length
+- Nesting depth
+- Too many parameters
+- Duplicate code
+- Duplicate strings
+- Duplicate CSS
+- Circular dependencies
+- Import ordering
+- Naming consistency
+- Mixed quote styles
+- Mixed semicolon styles
+- Missing braces
+- Prefer `const`
+- Prefer optional chaining
+- Prefer nullish coalescing
+- Unnecessary boolean comparisons
+- Unnecessary template strings
+- Unnecessary fragments
+- Dead code
+- Unreachable code
+- Unused exports
+- Unused files
+- Unused dependencies
+- Missing error boundaries
+- Missing error handling
+- TODOs without issue references
+- FIXME comments
+- Commented-out code
+- Suspicious empty functions
+
+## Better fixing workflow
+
+- Preview a unified diff before applying
+- Apply all fixes in one transaction
+- Roll back the entire run if any fix fails
+- Create named restore points
+- Add `vhite restore <run-id>`
+- Keep a fix history
+- Support undo for the last run
+- Write a patch file instead of modifying files
+- Support dry-run mode
+- Re-scan automatically after fixing
+- Refuse to fix files changed during the run
+- Detect overlapping fixes
+- Group fixes by file
+- Allow approving rules rather than individual issues
+- Allow rejecting a fix permanently
+- Explain why a fix was considered safe
+- Show before and after snippets
+- Verify formatting after changes
+- Run tests after fixes
+- Run the project’s type checker after fixes
+- Run the project’s build after fixes
+
+## Configuration and project support
+
+- `.vhiterc.json`
+- `vhite.config.js`
+- Configuration inheritance
+- Shared organization configs
+- Per-directory overrides
+- Monorepo support
+- Workspace package detection
+- TypeScript support
+- `.tsx` support
+- JSON and JSONC support
+- Markdown code block scanning
+- Svelte support
+- Vue support
+- Astro support
+- Angular templates
+- CSS modules
+- Tailwind class scanning
+- Sass and Less
+- Generated-file detection
+- Test-file-specific rules
+- Storybook-specific rules
+- Ignore files using `.gitignore`
+- Ignore files using `.vhiteignore`
+- Default ignores for coverage and cache folders
+
+## Developer experience
+
+- Colored terminal output
+- Progress indicator
+- Summary dashboard
+- Rule documentation links
+- `vhite explain rule-name`
+- Suggestions for fixing configuration errors
+- “Did you mean?” for misspelled rules
+- First-run setup that can be rerun
+- Project health score
+- Trend tracking across runs
+- Per-rule counts
+- Per-directory counts
+- New versus existing findings
+- Estimated cleanup time
+- “Top five problems” summary
+- Friendly output for no findings
+- Noninteractive defaults in CI
+- Stable output for snapshot tests
+- Better error messages
+- Timing information per rule
+- Cache statistics
+- Scan cancellation with Ctrl+C
+- Resumable scans
+
+## Integrations
+
+- VS Code extension
+- JetBrains plugin
+- GitHub Action
+- Pre-commit hook
+- Husky integration
+- lint-staged integration
+- npm package integration
+- GitHub pull request comments
+- GitHub annotations
+- GitLab Code Quality output
+- Bitbucket integration
+- Discord or Slack notifications
+- Web dashboard
+- Team reports
+- Scheduled scans
+- Uploadable SARIF reports
+- Editor quick fixes
+- Language Server Protocol support
+
+## AI-specific features
+
+Since Vhite is described as an AI code cleaner, make the AI behavior explicit and useful:
+
+- AI-generated explanations for difficult findings
+- AI suggestions for fixes
+- AI-generated tests for risky fixes
+- Natural-language rule creation
+- “Why is this code suspicious?” command
+- “Explain this file’s issues” command
+- Project-aware suggestions
+- Learn project conventions
+- Group related findings
+- Detect likely false positives
+- Rank findings by risk
+- Generate a cleanup plan
+- Convert TODO comments into tasks
+- Suggest issue titles and descriptions
+- Summarize changes after fixing
+- Ask AI to review only changed files
+- Add a privacy mode that never sends source code
+- Local model support
+- Configurable provider support
+- Token and cost reporting
+- Prompt templates stored in the repository
+- Human approval required for every AI edit
+- AI confidence scores
+- Show exact source used for each recommendation
+- Prevent AI from touching lockfiles and generated files
+- Redact secrets before sending code to an AI provider
+
+## Reporting and analytics
+
+- HTML report
+- JSON report
+- SARIF report
+- Per-rule trend charts
+- Issue count over time
+- New, fixed, and recurring issue counts
+- Most problematic files
+- Most common rules
+- Security and accessibility scores
+- Technical debt estimate
+- Fix success rate
+- Rollback rate
+- Scan duration
+- Rule performance
+- Export CSV
+- Compare two runs
+- Compare branches
+- PR-specific summary
+- Badge for README
+- Quality gate thresholds
+
+## Testing and reliability features
+
+- Test each rule against valid and invalid examples
+- Test autofix idempotence
+- Test fixes with CRLF line endings
+- Test Unicode source files
+- Test files without final newlines
+- Test duplicate findings
+- Test nested projects
+- Test symlinks safely
+- Test ignored directories
+- Test malformed source
+- Test very large files
+- Test parser recovery
+- Test concurrent scans
+- Test config validation
+- Test backup restoration
+- Test interrupted fixes
+- Test report generation
+- Test CI behavior
+- Fuzz-test parser inputs
+- Add performance benchmarks
+- Add a rule authoring test helper
+
+## Product features that would make Vhite stand out
+
+- A “safe cleanup mode” designed for beginners
+- A “strict mode” for production teams
+- A project health score that explains how it was calculated
+- A one-command onboarding flow
+- A cleanup wizard that fixes issues in priority order
+- Rule packs for React, Next.js, Vue, accessibility, security, and performance
+- A local-only privacy mode
+- A visual HTML report
+- A before-and-after cleanup summary
+- A migration assistant for old frontend code
+- A “teach Vhite your conventions” configuration wizard
+- A community rule marketplace
+- Shareable rule configurations
+- A plugin API for custom rules
+- A rule generator command
+- A fixture generator for rule authors
+- A benchmark page comparing Vhite with ESLint plugins
+- A “why this matters” explanation for every issue
+- A command that recommends the next three fixes
+- A smart grouping system that collapses duplicate findings
+- A project-specific ignore suggestion system
+
+My recommended order is:
+
+1. CLI commands and flags  
+2. Exit codes and JSON output  
+3. Better locations with columns and snippets  
+4. Severity and configurable rules  
+5. `.gitignore`-aware scanning and changed-file mode  
+6. Baselines and inline suppressions  
+7. React and accessibility rules  
+8. Previewable transactional fixes  
+9. TypeScript, Vue, and framework support  
+10. GitHub Action, pre-commit hook, and VS Code extension  
+11. Security and performance packs  
+12. AI explanations and privacy controls  
+
+That sequence would turn Vhite from a promising collection of rules into a dependable frontend quality tool.
