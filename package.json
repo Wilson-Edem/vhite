@@ -1,5 +1,5 @@
 {
-  "name": "vhite",
+  "name": "@vhite/vhite",
   "version": "0.1.0",
   "description": "An AI code cleaner for front-end projects that finds and safely fixes common AI-generated problems",
   "license": "ISC",
@@ -15,6 +15,9 @@
     "rules",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18"
   },

@@ -1,4 +1,4 @@
-# vhite
+# @vhite/vhite
 
 vhite scans front-end code for common problems left behind by AI code generators, explains each one in plain English, and can safely fix some of them.
 
@@ -6,11 +6,11 @@ vhite scans front-end code for common problems left behind by AI code generators
 
 Run it on any project folder without installing it:
 
-    npx vhite path/to/your/project
+    npx @vhite/vhite path/to/your/project
 
 Or run it on the current folder:
 
-    npx vhite .
+    npx @vhite/vhite .
 
 ## What it checks
 
