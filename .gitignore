@@ -2,3 +2,4 @@ node_modules
 
 vhite.config.json
 .vhite-fix/
+*.tgz
