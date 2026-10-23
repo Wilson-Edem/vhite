@@ -1,6 +1,6 @@
 {
   "name": "@vhite/vhite",
-  "version": "0.2.1",
+  "version": "0.5.1",
   "description": "An AI code cleaner for front-end projects that finds and safely fixes common AI-generated problems",
   "license": "ISC",
   "author": "Victor Edem",
@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/Wilson-Edem/vhite#readme",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*/*.test.js"
   },
   "dependencies": {
     "espree": "^10.0.1",

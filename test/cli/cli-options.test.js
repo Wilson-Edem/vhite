@@ -5,12 +5,12 @@ import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { parseArgs, UsageError, isIncluded } from "../src/args.js";
-import { decideExitCode, EXIT } from "../src/exit-codes.js";
-import { formatJson } from "../src/json-output.js";
-import { loadConfig, severityOf } from "../src/config.js";
+import { parseArgs, UsageError, isIncluded } from "../../src/core/args.js";
+import { decideExitCode, EXIT } from "../../src/core/exit-codes.js";
+import { formatJson } from "../../src/output/json-output.js";
+import { loadConfig, severityOf } from "../../src/core/config.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = fileURLToPath(new URL("../", import.meta.url));
 const cliPath = resolve(here, "../bin/cli.js");
 
 function run(args) {

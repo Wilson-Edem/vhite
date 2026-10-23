@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runRules } from "../src/engine.js";
-import { formatReport } from "../src/reporter.js";
+import { runRules } from "../../src/core/engine.js";
+import { formatReport } from "../../src/output/reporter.js";
 
 async function scan(name, source) {
   const root = await mkdtemp(join(tmpdir(), "vhite-loc-"));

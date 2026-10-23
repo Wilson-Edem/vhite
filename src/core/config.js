@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { rules } from "../rules/index.js";
+import { rules } from "../../rules/index.js";
 
 const CONFIG_NAME = "vhite.config.json";
 const knownRules = new Set(rules.map((rule) => rule.name));

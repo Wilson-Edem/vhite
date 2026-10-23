@@ -5,7 +5,7 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
-import { rules } from "../rules/index.js";
+import { rules } from "../../rules/index.js";
 
 export const CONFIG_NAME = "vhite.config.json";
 

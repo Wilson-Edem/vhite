@@ -7,7 +7,7 @@ import { createInterface } from "node:readline/promises";
 import {
   FIX_DIR,
   ensureGitignoreEntry,
-} from "./gitignore.js";
+} from "../fix/gitignore.js";
 
 function escapeMarkdown(value) {
   return String(value ?? "")

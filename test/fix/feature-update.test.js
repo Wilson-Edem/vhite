@@ -12,12 +12,12 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { deleteRunBackups } from "../src/backup.js";
+import { deleteRunBackups } from "../../src/fix/backup.js";
 
 import {
   formatMarkdownRunReport,
   writeRunReport,
-} from "../src/run-report.js";
+} from "../../src/output/run-report.js";
 
 async function makeProject() {
   return mkdtemp(join(tmpdir(), "vhite-feature-test-"));

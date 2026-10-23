@@ -9,6 +9,7 @@ const leftoverTodo = {
     const issues = [];
     for (const comment of ast.comments ?? []) {
       if (comment.range?.[0] === 0 && source?.startsWith("#!")) continue;
+      if (comment.value.includes("vhite-disable")) continue;
 
       const isTodo = todoPattern.test(comment.value);
       issues.push({

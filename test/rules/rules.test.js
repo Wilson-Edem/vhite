@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { runRules } from "../src/engine.js";
+import { runRules } from "../../src/core/engine.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = fileURLToPath(new URL("../", import.meta.url));
 const fixture = (name) => join(here, "fixtures", name);
 
 async function linesFor(name, rule) {

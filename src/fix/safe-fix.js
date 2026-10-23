@@ -2,7 +2,7 @@ import {
   readFile,
   writeFile,
 } from "node:fs/promises";
-import { runRules } from "./engine.js";
+import { runRules } from "../core/engine.js";
 import {
   fixers as defaultFixers,
 } from "./fixers/index.js";

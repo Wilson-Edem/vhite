@@ -1,3 +1,4 @@
+  import { frontendExplanations } from "./explanations-frontend.js";
 export const explanations = {
    "leftover-todo": {
     whatHappened: "A comment is still in the code. Comments that mark unfinished work (TODO or FIXME) are easy to forget before release, and other comments can go out of date and mislead the next developer.",
@@ -31,5 +32,6 @@ export const explanations = {
     whatHappened: "vhite couldn't read this file as JavaScript, so it skipped the checks that need to understand the code.",
     proposedChange: "Open the file at the line shown and fix the syntax error, then scan again.",
   },
+      ...frontendExplanations,
 };
 

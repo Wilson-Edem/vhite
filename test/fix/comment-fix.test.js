@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runRules } from "../src/engine.js";
-import { proposeFixes, applyApprovedFixes } from "../src/safe-fix.js";
-import { fixers } from "../src/fixers/index.js";
+import { runRules } from "../../src/core/engine.js";
+import { proposeFixes, applyApprovedFixes } from "../../src/fix/safe-fix.js";
+import { fixers } from "../../src/fix/fixers/index.js";
 
 const sample = "// header\nconst a = 1; // trailing\n/* block */\nconst b = 2;\n";
 

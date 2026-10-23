@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runRules } from "../src/engine.js";
-import { proposeFixes, applyApprovedFixes } from "../src/safe-fix.js";
-import { ensureGitignoreEntry } from "../src/gitignore.js";
-import { fixers } from "../src/fixers/index.js";
+import { runRules } from "../../src/core/engine.js";
+import { proposeFixes, applyApprovedFixes } from "../../src/fix/safe-fix.js";
+import { ensureGitignoreEntry } from "../../src/fix/gitignore.js";
+import { fixers } from "../../src/fix/fixers/index.js";
 
 async function makeProject(files) {
   const root = await mkdtemp(join(tmpdir(), "vhite-fix-test-"));

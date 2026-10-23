@@ -1,4 +1,4 @@
-export const COMMANDS = ["scan", "fix", "rules", "explain", "version", "help"];
+export const COMMANDS = ["scan", "fix", "baseline", "rules", "explain", "version", "help"];
 
 const FORMATS = ["text", "json"];
 const VALUE_FLAGS = new Set(["--format", "--rule", "--disable", "--include", "--exclude"]);
@@ -13,6 +13,9 @@ export function parseArgs(argv) {
     format: "text",
     quiet: false,
     fix: false,
+    changed: false,
+    staged: false,
+    useBaseline: true,
     rules: [],
     disable: [],
     include: [],
@@ -34,6 +37,12 @@ export function parseArgs(argv) {
       options.quiet = true;
     } else if (arg === "--fix") {
       options.fix = true;
+    } else if (arg === "--changed") {
+      options.changed = true;
+    } else if (arg === "--staged") {
+      options.staged = true;
+    } else if (arg === "--no-baseline") {
+      options.useBaseline = false;
     } else if (VALUE_FLAGS.has(arg)) {
       const value = args[index + 1];
       if (value === undefined || value.startsWith("--")) {
@@ -48,12 +57,16 @@ export function parseArgs(argv) {
     }
   }
 
+  if (options.changed && options.staged) {
+    throw new UsageError("Use either --changed or --staged, not both");
+  }
+
   if (options.command === "explain") {
     if (options.positionals.length !== 1) {
       throw new UsageError("explain needs exactly one rule name, for example: vhite explain console-log");
     }
     options.ruleName = options.positionals[0];
-  } else if (options.command === "scan" || options.command === "fix") {
+  } else if (["scan", "fix", "baseline"].includes(options.command)) {
     if (options.positionals.length > 1) {
       throw new UsageError("Only one folder can be scanned at a time");
     }

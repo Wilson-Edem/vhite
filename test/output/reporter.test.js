@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatReport } from "../src/reporter.js";
+import { formatReport } from "../../src/output/reporter.js";
 
 const root = "/project";
 

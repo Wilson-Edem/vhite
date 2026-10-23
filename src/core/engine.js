@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { parse } from "espree";
-import { rules } from "../rules/index.js";
+import { rules } from "../../rules/index.js";
 
 function parseSource(source, file) {
   const extension = extname(file).toLowerCase();

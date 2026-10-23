@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = fileURLToPath(new URL("../", import.meta.url));
 const cliPath = resolve(here, "../bin/cli.js");
 
 async function makeProject(files) {
