@@ -1,6 +1,6 @@
-export const COMMANDS = ["scan", "fix", "baseline", "rules", "explain", "version", "help"];
+export const COMMANDS = ["scan", "fix", "baseline", "hook", "rules", "explain", "version", "help"];
 
-const FORMATS = ["text", "json"];
+const FORMATS = ["text", "json", "sarif"];
 const VALUE_FLAGS = new Set(["--format", "--rule", "--disable", "--include", "--exclude"]);
 
 export class UsageError extends Error {}
@@ -16,6 +16,9 @@ export function parseArgs(argv) {
     changed: false,
     staged: false,
     useBaseline: true,
+    watch: false,
+    noPrompt: false,
+    force: false,
     rules: [],
     disable: [],
     include: [],
@@ -43,6 +46,12 @@ export function parseArgs(argv) {
       options.staged = true;
     } else if (arg === "--no-baseline") {
       options.useBaseline = false;
+    } else if (arg === "--no-prompt") {
+      options.noPrompt = true;
+    } else if (arg === "--watch") {
+      options.watch = true;
+    } else if (arg === "--force") {
+      options.force = true;
     } else if (VALUE_FLAGS.has(arg)) {
       const value = args[index + 1];
       if (value === undefined || value.startsWith("--")) {
@@ -61,11 +70,25 @@ export function parseArgs(argv) {
     throw new UsageError("Use either --changed or --staged, not both");
   }
 
+  if (options.watch && (options.command !== "scan" || options.format !== "text")) {
+    throw new UsageError("--watch works only with a scan that prints text");
+  }
+
   if (options.command === "explain") {
     if (options.positionals.length !== 1) {
       throw new UsageError("explain needs exactly one rule name, for example: vhite explain console-log");
     }
     options.ruleName = options.positionals[0];
+  } else if (options.command === "hook") {
+    const action = options.positionals[0];
+    if (!["install", "remove"].includes(action)) {
+      throw new UsageError("hook needs an action: vhite hook install or vhite hook remove");
+    }
+    if (options.positionals.length > 2) {
+      throw new UsageError("Only one folder can be used with hook");
+    }
+    options.hookAction = action;
+    options.path = options.positionals[1] ?? ".";
   } else if (["scan", "fix", "baseline"].includes(options.command)) {
     if (options.positionals.length > 1) {
       throw new UsageError("Only one folder can be scanned at a time");
@@ -79,7 +102,7 @@ export function parseArgs(argv) {
 function applyValue(options, flag, value) {
   if (flag === "--format") {
     if (!FORMATS.includes(value)) {
-      throw new UsageError(`--format must be text or json, not "${value}"`);
+      throw new UsageError(`--format must be text, json, or sarif, not "${value}"`);
     }
     options.format = value;
   } else if (flag === "--rule") {

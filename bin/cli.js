@@ -7,6 +7,8 @@ import { USAGE } from "./output/text.js";
 import { listRules, explainRule } from "./commands/info.js";
 import { runBaseline } from "./commands/baseline.js";
 import { runScan } from "./commands/scan.js";
+import { runHook } from "./commands/hook.js";
+import { runWatch } from "./commands/watch.js";
 
 async function main() {
   let options;
@@ -41,6 +43,14 @@ async function main() {
 
   if (options.command === "baseline") {
     return runBaseline(options);
+  }
+
+  if (options.command === "hook") {
+    return runHook(options);
+  }
+
+  if (options.watch) {
+    return runWatch(options);
   }
 
   return runScan(options);

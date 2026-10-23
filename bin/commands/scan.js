@@ -9,6 +9,7 @@ import { FIX_DIR } from "../../src/fix/gitignore.js";
 import { askYesNo, writeRunReport } from "../../src/output/run-report.js";
 import { EXIT, decideExitCode } from "../../src/core/exit-codes.js";
 import { formatJson } from "../../src/output/json-output.js";
+import { formatSarif } from "../../src/output/sarif.js";
 import { formatReport } from "../../src/output/reporter.js";
 import { BASELINE_NAME, loadBaseline } from "../../src/scan/baseline.js";
 import { readVersion } from "../../src/core/version.js";
@@ -25,7 +26,7 @@ export async function runScan(options) {
   const target = resolve(options.path ?? ".");
   const isText = options.format === "text";
   const showText = isText && !options.quiet;
-  const interactive = canAskQuestions() && showText;
+  const interactive = canAskQuestions() && showText && !options.watching && !options.noPrompt;
   const logs = [];
   const startedAt = new Date();
 
@@ -171,6 +172,10 @@ export async function runScan(options) {
       } else {
         say("Report generation skipped.");
       }
+    }
+
+    if (options.format === "sarif") {
+      console.log(formatSarif({ root: target, issues, version: await readVersion() }));
     }
 
     if (options.format === "json") {

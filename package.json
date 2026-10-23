@@ -1,6 +1,6 @@
 {
   "name": "@vhite/vhite",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "An AI code cleaner for front-end projects that finds and safely fixes common AI-generated problems",
   "license": "ISC",
   "author": "Victor Edem",
