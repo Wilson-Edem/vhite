@@ -21,12 +21,39 @@
   "engines": {
     "node": ">=18"
   },
-  "keywords": [
+    "keywords": [
     "ai",
+    "ai-code",
+    "ai-generated-code",
+    "ai-code-cleanup",
+    "ai-code-review",
     "code-cleanup",
+    "code-quality",
+    "code-review",
     "linter",
+    "lint",
+    "static-analysis",
+    "code-analysis",
     "front-end",
-    "javascript"
+    "frontend",
+    "javascript",
+    "jsx",
+    "react",
+    "accessibility",
+    "a11y",
+    "wcag",
+    "security",
+    "hardcoded-secrets",
+    "console-log",
+    "debugger",
+    "unused-imports",
+    "dead-code",
+    "cli",
+    "command-line",
+    "ci",
+    "github-actions",
+    "pre-commit",
+    "vibe-coding"
   ],
   "repository": {
     "type": "git",
