@@ -19,7 +19,8 @@ const consoleLog = {
         node.callee.property.name === "log"
       ) {
         issues.push({
-          line: node.loc?.start.line ?? 1,
+                    start: node.range?.[0],
+          end: node.range?.[1],
           message: "Review or remove this console.log call",
         });
       }

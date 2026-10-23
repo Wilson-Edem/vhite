@@ -5,12 +5,15 @@ const leftoverTodo = {
   description: "Flags comments left in code, with TODO and FIXME notes called out separately",
   extensions: [".js", ".jsx", ".mjs", ".cjs"],
   requiresAst: true,
-  check({ ast }) {
+  check({ ast, source }) {
     const issues = [];
     for (const comment of ast.comments ?? []) {
+      if (comment.range?.[0] === 0 && source?.startsWith("#!")) continue;
+
       const isTodo = todoPattern.test(comment.value);
       issues.push({
-        line: comment.loc.start.line,
+        start: comment.range?.[0],
+        end: comment.range?.[1],
         message: isTodo ? "Leftover TODO or FIXME note" : "Code comment left in the file",
         comment: {
           type: comment.type,

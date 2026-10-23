@@ -15,7 +15,8 @@ const emptyCatch = {
         node.body.body.length === 0
       ) {
         issues.push({
-          line: node.loc?.start.line ?? 1,
+                    start: node.range?.[0],
+          end: node.range?.[1],
           message: "Handle, log, or explicitly document this caught error",
         });
       }

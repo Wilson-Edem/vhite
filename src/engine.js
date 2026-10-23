@@ -20,6 +20,57 @@ function parseSource(source, file) {
   });
 }
 
+function lineStartsOf(source) {
+  const starts = [0];
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\n") starts.push(index + 1);
+  }
+  return starts;
+}
+
+function positionAt(starts, offset) {
+  let low = 0;
+  let high = starts.length - 1;
+
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (starts[middle] <= offset) {
+      low = middle;
+    } else {
+      high = middle - 1;
+    }
+  }
+
+  return { line: low + 1, column: offset - starts[low] + 1 };
+}
+
+function withLocation(issue, source, starts) {
+  if (typeof issue.start !== "number") {
+    return {
+      ...issue,
+      line: issue.line ?? 1,
+      column: issue.column ?? 1,
+    };
+  }
+
+  const start = positionAt(starts, issue.start);
+  const end = positionAt(starts, Math.max(issue.end ?? issue.start, issue.start));
+  const lineStart = starts[start.line - 1];
+  const lineEnd = source.indexOf("\n", lineStart);
+  const snippet = source
+    .slice(lineStart, lineEnd === -1 ? source.length : lineEnd)
+    .replace(/\r$/, "");
+
+  return {
+    ...issue,
+    line: start.line,
+    column: start.column,
+    endLine: end.line,
+    endColumn: end.column,
+    snippet,
+  };
+}
+
 export async function runRules(files, { disabledRules = new Set() } = {}) {
   const issues = [];
   const activeRules = rules.filter((rule) => !disabledRules.has(rule.name));
@@ -27,6 +78,7 @@ export async function runRules(files, { disabledRules = new Set() } = {}) {
   for (const file of files) {
     const source = await readFile(file, "utf8");
     const extension = extname(file).toLowerCase();
+    const starts = lineStartsOf(source);
 
     const applicableRules = activeRules.filter((rule) =>
       rule.extensions?.includes(extension)
@@ -46,12 +98,18 @@ export async function runRules(files, { disabledRules = new Set() } = {}) {
       try {
         ast = parseSource(source, file);
       } catch (error) {
-        issues.push({
-          rule: "parser",
-          file,
-          line: error.lineNumber ?? 1,
-          message: `Unable to parse file: ${error.message}`,
-        });
+        issues.push(
+          withLocation(
+            {
+              rule: "parser",
+              file,
+              line: error.lineNumber ?? 1,
+              message: `Unable to parse file: ${error.message}`,
+            },
+            source,
+            starts
+          )
+        );
       }
     }
 
@@ -67,11 +125,17 @@ export async function runRules(files, { disabledRules = new Set() } = {}) {
       });
 
       for (const issue of found) {
-        issues.push({
-          rule: rule.name,
-          file,
-          ...issue,
-        });
+        issues.push(
+          withLocation(
+            {
+              rule: rule.name,
+              file,
+              ...issue,
+            },
+            source,
+            starts
+          )
+        );
       }
     }
   }

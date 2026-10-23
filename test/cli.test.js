@@ -39,7 +39,7 @@ async function withProject(files, callback) {
 test("CLI scans the supplied directory and prints the report", async () => {
   await withProject({ "app.js": 'console.log("hello");\n' }, (root) => {
     const result = runCli(root);
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 1, result.stderr);
     assert.match(result.stdout, /vhite found 1 front-end files/);
     assert.match(result.stdout, /console-log/);
     assert.match(result.stdout, /1 issue\(s\) in 1 file\(s\)/);
@@ -53,7 +53,7 @@ test("CLI respects rules disabled in vhite.config.json", async () => {
   }, (root) => {
     const result = runCli(root);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /Rules turned off by vhite\.config\.json: console-log/);
+    assert.match(result.stdout, /Rules turned off: console-log/);
     assert.match(result.stdout, /No issues found\./);
   });
 });
@@ -64,7 +64,7 @@ test("CLI reports invalid configuration and exits with an error", async () => {
     "vhite.config.json": "{ invalid json",
   }, (root) => {
     const result = runCli(root);
-    assert.equal(result.status, 1);
+    assert.equal(result.status, 2);
     assert.match(result.stderr, /Error: vhite\.config\.json is not valid JSON/);
   });
 });

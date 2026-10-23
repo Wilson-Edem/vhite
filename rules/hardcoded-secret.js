@@ -17,16 +17,21 @@ const hardcodedSecret = {
     const issues = [];
     const lines = source.split("\n");
 
-    lines.forEach((text, index) => {
+    let lineStart = 0;
+    lines.forEach((text) => {
       for (const item of SECRET_PATTERNS) {
-        if (item.pattern.test(text)) {
+        const match = item.pattern.exec(text);
+        if (match) {
+          const start = lineStart + match.index;
           issues.push({
-            line: index + 1,
+            start,
+            end: start + match[0].length,
             message: `Possible hardcoded secret (${item.label}); move it to a secure environment variable and rotate it if real`,
           });
           break;
         }
       }
+      lineStart += text.length + 1;
     });
 
     return issues;

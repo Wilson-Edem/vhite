@@ -16,7 +16,8 @@ const emptyBlock = {
         key !== "body"
       ) {
         issues.push({
-          line: node.loc?.start.line ?? 1,
+                    start: node.range?.[0],
+          end: node.range?.[1],
           message: "Review this empty block; it may indicate missing logic",
         });
       }

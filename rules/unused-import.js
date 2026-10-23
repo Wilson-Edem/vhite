@@ -52,8 +52,10 @@ const unusedImport = {
 
         if (!hasRead && !usedInJsx && !implicitReact) {
           const definition = variable.defs.find((item) => item.type === "ImportBinding");
+                   const target = definition?.name ?? variable.identifiers[0];
           issues.push({
-            line: definition?.name?.loc?.start.line ?? variable.identifiers[0]?.loc?.start.line ?? 1,
+            start: target?.range?.[0],
+            end: target?.range?.[1],
             message: `Imported binding "${variable.name}" is never used`,
           });
         }

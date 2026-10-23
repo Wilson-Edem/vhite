@@ -1,216 +1,324 @@
 #!/usr/bin/env node
 
-import { resolve, join, relative } from "node:path";
+import { resolve, join, relative, sep } from "node:path";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 import { findFiles } from "../src/files.js";
 import { runRules } from "../src/engine.js";
 import { formatReport } from "../src/reporter.js";
-import { loadConfig } from "../src/config.js";
-
-import {
-  CONFIG_NAME,
-  canAskQuestions,
-  runFirstTimeSetup,
-} from "../src/setup.js";
-
-import {
-  proposeFixes,
-  applyApprovedFixes,
-} from "../src/safe-fix.js";
-
+import { loadConfig, applySeverity, severityOf } from "../src/config.js";
+import { CONFIG_NAME, canAskQuestions, runFirstTimeSetup } from "../src/setup.js";
+import { proposeFixes, applyApprovedFixes } from "../src/safe-fix.js";
 import { chooseProposals } from "../src/approve.js";
 import { deleteRunBackups } from "../src/backup.js";
 import { FIX_DIR } from "../src/gitignore.js";
+import { askYesNo, writeRunReport } from "../src/run-report.js";
+import { parseArgs, UsageError, isIncluded } from "../src/args.js";
+import { EXIT, decideExitCode } from "../src/exit-codes.js";
+import { formatJson } from "../src/json-output.js";
+import { rules } from "../rules/index.js";
+import { explanations } from "../src/explanations.js";
+import { fixers } from "../src/fixers/index.js";
 
-import {
-  askYesNo,
-  writeRunReport,
-} from "../src/run-report.js";
+const USAGE = `Usage:
+  vhite [path]              Scan a folder (default command)
+  vhite scan [path]         Scan and report
+  vhite fix [path]          Scan, then choose which fixes to apply
+  vhite rules               List all rules
+  vhite explain <rule>      Explain one rule
+  vhite version             Show the version
 
-// Capture terminal messages so the report can include them.
-const logs = [];
+Options:
+  --format text|json        Output format (default: text)
+  --quiet, -q               Print only errors; the exit code still applies
+  --fix                     Apply all safe fixes without asking, then rescan
+  --rule <name>             Run only this rule (repeatable)
+  --disable <name>          Turn off a rule (repeatable)
+  --include <path>          Scan only files under this path (repeatable)
+  --exclude <path>          Skip files under this path (repeatable)
+  --help, -h                Show this help
 
-const originalLog = console.log;
-const originalWarn = console.warn;
-const originalError = console.error;
+Exit codes:
+  0  no problems
+  1  problems found (errors or warnings; info notes do not count)
+  2  configuration or runtime error
+  3  fixes applied and no problems remain
+  4  fixes were rolled back`;
 
-function capture(method, label = "") {
-  return (...args) => {
-    const message = args
-      .map((arg) => {
-        if (typeof arg === "string") {
-          return arg;
-        }
+const BANNER = `vhite is installed and running
+   loading..
+             ....
+                  ......
+                         ........
+   Done..`;
 
-        try {
-          return JSON.stringify(arg) ?? String(arg);
-        } catch {
-          return String(arg);
-        }
-      })
-      .join(" ");
+const KNOWN_RULES = new Set(rules.map((rule) => rule.name));
 
-    logs.push(label ? `${label}: ${message}` : message);
-    method(...args);
-  };
+async function readVersion() {
+  const text = await readFile(new URL("../package.json", import.meta.url), "utf8");
+  return JSON.parse(text).version;
 }
 
-console.log = capture(originalLog);
-console.warn = capture(originalWarn, "WARN");
-console.error = capture(originalError, "ERROR");
-
-const startedAt = new Date();
-const target = resolve(process.argv[2] ?? ".");
-
-let files = [];
-let issues = [];
-let proposals = [];
-let fixResults = [];
-let backupCleanup = null;
-let config = null;
-
-console.log(
-  `vhite is installed and running
-   loading..
-             ....  
-                  ...... 
-                         ........
-   Done..`
-);
-
-try {
-  if (
-    !existsSync(join(target, CONFIG_NAME)) &&
-    canAskQuestions()
-  ) {
-    await runFirstTimeSetup(target);
-  }
-
-  config = await loadConfig(target);
-
-  for (const warning of config.warnings) {
-    console.log(`Warning: ${warning}`);
-  }
-
-  if (config.disabledRules.size > 0) {
+function listRules() {
+  console.log("Rule                  Severity  Fix   Description");
+  for (const rule of rules) {
+    const severity = severityOf(rule.name, { severities: new Map() });
+    const fixable = fixers[rule.name] ? "yes" : "no";
     console.log(
-           `Rules turned off by ${CONFIG_NAME}: ${[...config.disabledRules].join(", ")}`
+      `${rule.name.padEnd(22)}${severity.padEnd(10)}${fixable.padEnd(6)}${rule.description}`
     );
   }
+  return EXIT.CLEAN;
+}
 
-  files = await findFiles(target);
+function explainRule(name) {
+  if (!KNOWN_RULES.has(name)) {
+    console.error(`Error: unknown rule "${name}"`);
+    console.error(`Known rules: ${[...KNOWN_RULES].join(", ")}`);
+    return EXIT.ERROR;
+  }
 
-  console.log(
-    `vhite found ${files.length} front-end files in ${relative(process.cwd(), target) || "."}\n`
+  const rule = rules.find((item) => item.name === name);
+  const info = explanations[name];
+
+  console.log(name);
+  console.log(`  ${rule.description}`);
+  if (info) {
+    console.log(`  What happened: ${info.whatHappened}`);
+    console.log(`  Proposed change: ${info.proposedChange}`);
+  }
+  console.log(`  Default severity: ${severityOf(name, { severities: new Map() })}`);
+  console.log(`  Automatic fix: ${fixers[name] ? "yes" : "no"}`);
+  return EXIT.CLEAN;
+}
+
+function summaryLine(issues) {
+  const counts = { error: 0, warning: 0, info: 0 };
+  for (const issue of issues) {
+    counts[issue.severity] = (counts[issue.severity] ?? 0) + 1;
+  }
+  return `Errors: ${counts.error}  Warnings: ${counts.warning}  Info: ${counts.info}`;
+}
+
+async function runScan(options) {
+  const target = resolve(options.path ?? ".");
+  const isText = options.format === "text";
+  const showText = isText && !options.quiet;
+  const interactive = canAskQuestions() && showText;
+  const logs = [];
+  const startedAt = new Date();
+
+  const say = (message = "") => {
+    logs.push(message);
+    if (showText) console.log(message);
+  };
+
+  const unknown = [...options.rules, ...options.disable].filter(
+    (name) => !KNOWN_RULES.has(name)
   );
+  if (unknown.length > 0) {
+    console.error(`Error: unknown rule name(s): ${unknown.join(", ")}`);
+    return EXIT.ERROR;
+  }
 
-  issues = await runRules(files, {
-    disabledRules: config.disabledRules,
-  });
+  let config;
+  let issues = [];
+  let files = [];
+  let fixResults = [];
+  let backupCleanup = null;
 
-  console.log(formatReport(issues, target));
-  proposals = await proposeFixes(issues);
+  try {
+    if (showText && !options.quiet) {
+      console.log(BANNER);
+    }
 
-  if (proposals.length > 0 && canAskQuestions()) {
-    const chosen = await chooseProposals(target, proposals);
+    if (!existsSync(join(target, CONFIG_NAME)) && interactive) {
+      await runFirstTimeSetup(target);
+    }
+
+    config = await loadConfig(target);
+
+    for (const warning of config.warnings) {
+      say(`Warning: ${warning}`);
+    }
+
+    const disabled = new Set([...config.disabledRules, ...options.disable]);
+    if (options.rules.length > 0) {
+      const only = new Set(options.rules);
+      for (const rule of rules) {
+        if (!only.has(rule.name)) disabled.add(rule.name);
+      }
+    }
+
+    if (disabled.size > 0 && showText) {
+      say(`Rules turned off: ${[...disabled].join(", ")}`);
+    }
+
+    const allFiles = await findFiles(target);
+    files = allFiles.filter((file) =>
+      isIncluded(relative(target, file), options.include, options.exclude)
+    );
+
+    say(
+      `vhite found ${files.length} front-end files in ${relative(process.cwd(), target) || "."}\n`
+    );
+
+    issues = applySeverity(
+      await runRules(files, { disabledRules: disabled }),
+      config
+    );
+
+    say(formatReport(issues, target));
+    if (issues.length > 0) say(summaryLine(issues));
+
+    const proposals = await proposeFixes(issues);
+    let chosen = [];
+
+    if (proposals.length > 0) {
+      if (options.fix) {
+        chosen = proposals;
+      } else if (interactive) {
+        chosen = await chooseProposals(target, proposals);
+      } else if (options.command === "fix") {
+        console.error(
+          "Error: vhite fix needs an interactive terminal. Use --fix to apply all safe fixes."
+        );
+        return EXIT.ERROR;
+      }
+    }
 
     if (chosen.length > 0) {
-      const result = await applyApprovedFixes(
-        target,
-        chosen,
-        { disabledRules: config.disabledRules }
-      );
-
+      const result = await applyApprovedFixes(target, chosen, { disabledRules: disabled });
       fixResults = result.results;
 
       if (result.gitignoreUpdated) {
-        console.log(`Added ${FIX_DIR}/ to .gitignore`);
+        say(`Added ${FIX_DIR}/ to .gitignore`);
       }
 
       for (const item of fixResults) {
+        const where = `${relative(target, item.proposal.file)} line ${item.proposal.line}`;
         if (item.status === "applied") {
-          console.log(
-            `Applied: ${relative(target, item.proposal.file)} line ${item.proposal.line}`
-          );
+          say(`Applied: ${where}`);
         } else {
           const label = item.status === "skipped" ? "Skipped" : "Rolled back";
-          console.log(
-            `${label}: ${relative(target, item.proposal.file)} line ${item.proposal.line}. ${item.reason}`
-          );
+          say(`${label}: ${where}. ${item.reason}`);
         }
       }
-    }
-  }
 
-  // Feature 1: Ask whether to remove current-run backups.
-  const hasRunBackups = fixResults.some(
-    (item) => typeof item.backupPath === "string"
-  );
-
-  if (canAskQuestions() && hasRunBackups) {
-    const shouldDelete = await askYesNo(
-      "Do you want to delete the backup files created during this run?"
-    );
-
-    if (shouldDelete) {
-      const result = await deleteRunBackups(fixResults);
-      backupCleanup = {
-        requested: true,
-        deleted: result.deleted,
-      };
-
-      console.log(
-        `Deleted ${result.deleted} backup file(s) created during this run.`
+      issues = applySeverity(
+        await runRules(files, { disabledRules: disabled }),
+        config
       );
-    } else {
-      backupCleanup = {
-        requested: false,
-        deleted: 0,
-      };
-
-      console.log("Kept the backup files created during this run.");
+      say(`Final scan: ${issues.length} issue(s) remaining`);
     }
-  }
 
-  console.log("\nVhite run completed.");
+    const hasRunBackups = fixResults.some((item) => typeof item.backupPath === "string");
 
-  // Feature 2: Offer a detailed Markdown report.
-  if (canAskQuestions()) {
-    const shouldCreateReport = await askYesNo(
-      "Would you like to create a detailed Markdown report of this run?"
-    );
+    if (interactive && hasRunBackups) {
+      const shouldDelete = await askYesNo(
+        "Do you want to delete the backup files created during this run?"
+      );
 
-    if (shouldCreateReport) {
-      // Include the log messages generated before report creation.
-      const reportLogs = [...logs];
-      const finishedAt = new Date();
-
-      const result = await writeRunReport({
-        root: target,
-        target,
-        startedAt,
-        finishedAt,
-        filesScanned: files.length,
-        issues,
-        proposals,
-        fixResults,
-        logs: reportLogs,
-        backupCleanup,
-      });
-
-      if (result.gitignoreUpdated) {
-        console.log(`Added ${FIX_DIR}/ to .gitignore`);
+      if (shouldDelete) {
+        const result = await deleteRunBackups(fixResults);
+        backupCleanup = { requested: true, deleted: result.deleted };
+        say(`Deleted ${result.deleted} backup file(s) created during this run.`);
+      } else {
+        backupCleanup = { requested: false, deleted: 0 };
+        say("Kept the backup files created during this run.");
       }
-
-      console.log(
-        `Report created successfully: ${relative(target, result.reportPath)}`
-      );
-    } else {
-      console.log("Report generation skipped.");
     }
+
+    if (showText) say("\nVhite run completed.");
+
+    if (interactive) {
+      const shouldCreateReport = await askYesNo(
+        "Would you like to create a detailed Markdown report of this run?"
+      );
+
+      if (shouldCreateReport) {
+        const result = await writeRunReport({
+          root: target,
+          target,
+          startedAt,
+          finishedAt: new Date(),
+          filesScanned: files.length,
+          issues,
+          proposals: await proposeFixes(issues),
+          fixResults,
+          logs: [...logs],
+          backupCleanup,
+        });
+
+        if (result.gitignoreUpdated) {
+          say(`Added ${FIX_DIR}/ to .gitignore`);
+        }
+        say(`Report created successfully: ${relative(target, result.reportPath)}`);
+      } else {
+        say("Report generation skipped.");
+      }
+    }
+
+    if (options.format === "json") {
+      console.log(
+        formatJson({
+          root: target,
+          filesScanned: files.length,
+          issues,
+          fixes: fixResults,
+          version: await readVersion(),
+        })
+      );
+    }
+
+    const failing = issues.filter(
+      (issue) => issue.severity === "error" || issue.severity === "warning"
+    ).length;
+
+    return decideExitCode({
+      rolledBack: fixResults.filter((item) => item.status === "rolled back").length,
+      issues: failing,
+      applied: fixResults.filter((item) => item.status === "applied").length,
+    });
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    return EXIT.ERROR;
   }
-} catch (error) {
-  console.error(`Error: ${error.message}`);
-  process.exitCode = 1;
 }
+
+async function main() {
+  let options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    if (error instanceof UsageError) {
+      console.error(`Error: ${error.message}\n`);
+      console.error(USAGE);
+      return EXIT.ERROR;
+    }
+    throw error;
+  }
+
+  if (options.command === "help") {
+    console.log(USAGE);
+    return EXIT.CLEAN;
+  }
+
+  if (options.command === "version") {
+    console.log(await readVersion());
+    return EXIT.CLEAN;
+  }
+
+  if (options.command === "rules") {
+    return listRules();
+  }
+
+  if (options.command === "explain") {
+    return explainRule(options.ruleName);
+  }
+
+  return runScan(options);
+}
+
+process.exitCode = await main();
