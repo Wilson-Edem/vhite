@@ -95,7 +95,7 @@ Unknown rule names are reported as warnings, and the rest of the config still ap
 
 ## Safe fixes
 
-AI explanations are optional and off by default.
+Smart notes and smart fixes are optional. When you use them, the lines of code around each finding are sent to Google’s free service, with secrets removed first.
 
 Some problems can be fixed automatically: debugger statements, unused imports, and comments. vhite never changes a file without your approval.
 

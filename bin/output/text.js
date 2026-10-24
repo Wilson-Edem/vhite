@@ -18,6 +18,8 @@ Options:
   --disable <name>          Turn off a rule (repeatable)
   --include <path>          Scan only files under this path (repeatable)
   --exclude <path>          Skip files under this path (repeatable)
+  --smart-notes             Add short notes for errors (asked when not given)
+  --no-smart-fixes          Skip smart fixes for this run
   --help, -h                Show this help
 
 Exit codes:

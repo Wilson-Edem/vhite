@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-export const DEFAULT_ENDPOINT = "https://victor-edem.vercel.app/api/explain";
+export const DEFAULT_ENDPOINT = "https://victor-edem.vercel.app/api/smart-notes";
 const CONTEXT_LINES = 5;
 
 const SECRET_PATTERNS = [
@@ -23,9 +23,9 @@ export function contextFor(source, line) {
   return lines.slice(start, end).join("\n");
 }
 
-export async function explainIssue(issue, source, { endpoint, fetchImpl = fetch } = {}) {
+export async function noteIssue(issue, source, { endpoint, fetchImpl = fetch } = {}) {
   const snippet = redact(contextFor(source, issue.line));
-    const url = endpoint || process.env.VHITE_AI_URL || "https://victor-edem.vercel.app/api/explain";
+    const url = endpoint || process.env.VHITE_AI_URL || "https://victor-edem.vercel.app/api/smart-notes";
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,11 +39,11 @@ export async function explainIssue(issue, source, { endpoint, fetchImpl = fetch 
 
   const data = await response.json().catch(() => ({}));
   if (response.status === 429) return { limited: true };
-  if (!response.ok) throw new Error(data.error ?? `AI service returned ${response.status}`);
+  if (!response.ok) throw new Error(data.error ?? `Smart service returned ${response.status}`);
   return { text: data.explanation, remaining: data.remaining };
 }
 
-export async function explainAll(issues, say, { fetchImpl = fetch, endpoint } = {}) {
+export async function noteAll(issues, say, { fetchImpl = fetch, endpoint } = {}) {
   const cache = new Map();
   let explained = 0;
 
@@ -54,18 +54,18 @@ export async function explainAll(issues, say, { fetchImpl = fetch, endpoint } = 
 
     let result;
     try {
-      result = await explainIssue(issue, cache.get(issue.file), { endpoint, fetchImpl });
+      result = await noteIssue(issue, cache.get(issue.file), { endpoint, fetchImpl });
     } catch (error) {
-      say(`AI explanation unavailable: ${error.message}`);
+      say(`Smart notes unavailable: ${error.message}`);
       return explained;
     }
 
     if (result.limited) {
-      say("Daily AI explanation limit reached (20 per day). Try again tomorrow.");
+      say("Daily smart notes limit reached (20 per day). Try again tomorrow.");
       return explained;
     }
 
-    say(`  AI note for line ${issue.line} [${issue.rule}]: ${result.text}`);
+    say(`  Smart note for line ${issue.line} [${issue.rule}]: ${result.text}`);
     explained += 1;
   }
 

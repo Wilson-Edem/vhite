@@ -19,7 +19,8 @@ export function parseArgs(argv) {
     watch: false,
     noPrompt: false,
     force: false,
-    ai: false,
+    smartNotes: false,
+    noSmartFixes: false,
     rules: [],
     disable: [],
     include: [],
@@ -51,8 +52,10 @@ export function parseArgs(argv) {
       options.noPrompt = true;
     } else if (arg === "--watch") {
       options.watch = true;
-            } else if (arg === "--ai") {
-        options.ai = true;
+            } else if (arg === "--no-smart-fixes") {
+        options.noSmartFixes = true;
+            } else if (arg === "--smart-notes") {
+        options.smartNotes = true;
     } else if (arg === "--force") {
       options.force = true;
     } else if (VALUE_FLAGS.has(arg)) {

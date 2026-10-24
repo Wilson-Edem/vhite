@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { redact, contextFor, explainIssue, explainAll } from "../../src/ai/explain.js";
+import { redact, contextFor, noteIssue, noteAll } from "../../src/smart/notes.js";
 import { parseArgs } from "../../src/core/args.js";
 
 test("redact removes credential-looking values and tokens", () => {
@@ -19,14 +19,14 @@ test("contextFor returns five lines before and after the finding", () => {
   assert.equal(snippet.length, 11);
 });
 
-test("explainIssue sends only the rule, message, and redacted snippet", async () => {
+test("noteIssue sends only the rule, message, and redacted snippet", async () => {
   let sent = null;
   const fakeFetch = async (_url, options) => {
     sent = JSON.parse(options.body);
     return { ok: true, status: 200, json: async () => ({ explanation: "Because.", remaining: 19 }) };
   };
   const source = 'const apiKey = "abcd1234efgh5678";\nconsole.log(1);\n';
-  const result = await explainIssue(
+  const result = await noteIssue(
     { rule: "console-log", message: "Review", line: 2 },
     source,
     { endpoint: "https://example.test/api", fetchImpl: fakeFetch }
@@ -37,9 +37,9 @@ test("explainIssue sends only the rule, message, and redacted snippet", async ()
   assert.equal(Object.keys(sent).sort().join(","), "language,message,rule,snippet");
 });
 
-test("explainIssue reports the daily limit", async () => {
+test("noteIssue reports the daily limit", async () => {
   const fakeFetch = async () => ({ ok: false, status: 429, json: async () => ({}) });
-  const result = await explainIssue(
+  const result = await noteIssue(
     { rule: "console-log", message: "m", line: 1 },
     "console.log(1);",
     { endpoint: "https://example.test/api", fetchImpl: fakeFetch }
@@ -47,16 +47,16 @@ test("explainIssue reports the daily limit", async () => {
   assert.equal(result.limited, true);
 });
 
-test("explainAll writes each explanation through the say function", async () => {
+test("noteAll writes each explanation through the say function", async () => {
   const lines = [];
   const fakeFetch = async () => ({ ok: true, status: 200, json: async () => ({ explanation: "Note.", remaining: 1 }) });
   const issues = [{ rule: "debugger-statement", message: "m", line: 1, file: import.meta.filename }];
-  const count = await explainAll(issues, (line) => lines.push(line), { fetchImpl: fakeFetch, endpoint: "https://example.test/api" });
+  const count = await noteAll(issues, (line) => lines.push(line), { fetchImpl: fakeFetch, endpoint: "https://example.test/api" });
   assert.equal(count, 1);
-  assert.match(lines[0], /AI note for line 1/);
+  assert.match(lines[0], /Smart note for line 1/);
 });
 
-test("--ai turns on AI explanations without asking", () => {
-  assert.equal(parseArgs(["--ai"]).ai, true);
-  assert.equal(parseArgs([]).ai, false);
+test("--smart-notes turns on smart notes without asking", () => {
+  assert.equal(parseArgs(["--smart-notes"]).smartNotes, true);
+  assert.equal(parseArgs([]).smartNotes, false);
 });

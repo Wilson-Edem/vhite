@@ -10,7 +10,9 @@ import { askYesNo, writeRunReport } from "../../src/output/run-report.js";
 import { EXIT, decideExitCode } from "../../src/core/exit-codes.js";
 import { formatJson } from "../../src/output/json-output.js";
 import { formatSarif } from "../../src/output/sarif.js";
-  import { explainAll } from "../../src/ai/explain.js";
+import { noteAll } from "../../src/smart/notes.js";
+import { proposeSmartFixes, smartFixersFor } from "../../src/smart/fixes.js";
+import { readSmartFixSetting, saveSmartFixSetting, askSmartFixConsent } from "../../src/smart/consent.js";
 import { formatReport } from "../../src/output/reporter.js";
 import { BASELINE_NAME, loadBaseline } from "../../src/scan/baseline.js";
 import { readVersion } from "../../src/core/version.js";
@@ -22,6 +24,15 @@ import {
   disabledSetFor,
   summaryLine,
 } from "./shared.js";
+
+async function resolveSmartFixSetting(target, interactive) {
+  const saved = await readSmartFixSetting(target);
+  if (saved !== undefined) return saved;
+  if (!interactive) return false;
+  const allowed = await askSmartFixConsent();
+  await saveSmartFixSetting(target, allowed);
+  return allowed;
+}
 
 export async function runScan(options) {
   const target = resolve(options.path ?? ".");
@@ -89,17 +100,27 @@ export async function runScan(options) {
       say(`${first.suppressed} issue(s) skipped by vhite-disable comments`);
     }
 
-          if (showText && issues.length > 0 && !options.noPrompt && !options.watching) {
-        const wantsAi =
-          options.ai ||
-          (canAskQuestions() &&
-            (await askYesNo("Want AI explanations for these findings? (y/N)")));
-        if (wantsAi) {
-          const explained = await explainAll(issues, say);
-          say(`AI explanations added: ${explained}`);
-        }
+    const errorFindings = issues.filter((issue) => issue.severity === "error");
+    if (showText && errorFindings.length > 0 && !options.noPrompt && !options.watching) {
+      const wantsAi =
+        options.smartNotes ||
+        (canAskQuestions() &&
+          (await askYesNo("Want smart notes for the errors? (y/N)")));
+      if (wantsAi) {
+        const explained = await noteAll(errorFindings, say);
+        say(`Smart notes added: ${explained}`);
       }
-    const proposals = await proposeFixes(issues);
+    }
+
+    const deterministic = await proposeFixes(issues);
+    const smartSetting = options.noSmartFixes ? false : await resolveSmartFixSetting(target, interactive);
+    const handled = new Set(deterministic.map((item) => `${item.file}:${item.line}`));
+    let smartProposals = [];
+    if (smartSetting && (interactive || options.fix)) {
+      smartProposals = await proposeSmartFixes(issues, say, { skipLines: handled });
+    }
+
+    const proposals = [...deterministic, ...smartProposals];
     let chosen = [];
 
     if (proposals.length > 0) {
@@ -116,10 +137,29 @@ export async function runScan(options) {
     }
 
     if (chosen.length > 0) {
-      const result = await applyApprovedFixes(target, chosen, { disabledRules: disabled });
-      fixResults = result.results;
+      let gitignoreUpdated = false;
+      const results = [];
 
-      if (result.gitignoreUpdated) {
+      const plainChosen = chosen.filter((item) => !item.smartFix);
+      if (plainChosen.length > 0) {
+        const applied = await applyApprovedFixes(target, plainChosen, { disabledRules: disabled });
+        results.push(...applied.results);
+        gitignoreUpdated = gitignoreUpdated || applied.gitignoreUpdated;
+      }
+
+      const smartChosen = chosen.filter((item) => item.smartFix);
+      if (smartChosen.length > 0) {
+        const applied = await applyApprovedFixes(target, smartChosen, {
+          disabledRules: disabled,
+          fixers: smartFixersFor(smartChosen),
+        });
+        results.push(...applied.results);
+        gitignoreUpdated = gitignoreUpdated || applied.gitignoreUpdated;
+      }
+
+      fixResults = results;
+
+      if (gitignoreUpdated) {
         say(`Added ${FIX_DIR}/ to .gitignore`);
       }
 
