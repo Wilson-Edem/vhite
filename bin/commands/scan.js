@@ -105,7 +105,7 @@ export async function runScan(options) {
       const wantsAi =
         options.smartNotes ||
         (canAskQuestions() &&
-          (await askYesNo("Want smart notes for the errors? (y/N)")));
+          (await askYesNo("Want smart notes for the errors?")));
       if (wantsAi) {
         const explained = await noteAll(errorFindings, say);
         say(`Smart notes added: ${explained}`);
