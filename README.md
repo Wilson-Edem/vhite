@@ -95,6 +95,8 @@ Unknown rule names are reported as warnings, and the rest of the config still ap
 
 ## Safe fixes
 
+AI explanations are optional and off by default.
+
 Some problems can be fixed automatically: debugger statements, unused imports, and comments. vhite never changes a file without your approval.
 
 1. It scans the project and lists the problems it found.

@@ -10,6 +10,7 @@ import { askYesNo, writeRunReport } from "../../src/output/run-report.js";
 import { EXIT, decideExitCode } from "../../src/core/exit-codes.js";
 import { formatJson } from "../../src/output/json-output.js";
 import { formatSarif } from "../../src/output/sarif.js";
+  import { explainAll } from "../../src/ai/explain.js";
 import { formatReport } from "../../src/output/reporter.js";
 import { BASELINE_NAME, loadBaseline } from "../../src/scan/baseline.js";
 import { readVersion } from "../../src/core/version.js";
@@ -88,6 +89,16 @@ export async function runScan(options) {
       say(`${first.suppressed} issue(s) skipped by vhite-disable comments`);
     }
 
+          if (showText && issues.length > 0 && !options.noPrompt && !options.watching) {
+        const wantsAi =
+          options.ai ||
+          (canAskQuestions() &&
+            (await askYesNo("Want AI explanations for these findings? (y/N)")));
+        if (wantsAi) {
+          const explained = await explainAll(issues, say);
+          say(`AI explanations added: ${explained}`);
+        }
+      }
     const proposals = await proposeFixes(issues);
     let chosen = [];
 
